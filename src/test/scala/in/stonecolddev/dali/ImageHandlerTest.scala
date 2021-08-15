@@ -9,14 +9,12 @@ import java.awt.image.BufferedImage
 
 class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory {
 
-
   "ImageHandler.Resizer" should "resize an image" in new MockImageTest {
     val resizeStrategy = new Resizer {
       override def resize = (width: Int, height: Int, buffered: BufferedImage) => {
         fakeBufferedImage(width, height)
       }
     }
-
 
     bufferedImg.getHeight should equal(250)
     bufferedImg.getWidth should equal(250)
@@ -30,7 +28,7 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
     mockRead expects imageLocation returns bufferedImg
     mockStore expects bufferedImg
 
-    MockImage.read("/stupid/dumb/path") shouldBe(bufferedImg)
+    MockImage.read(imageLocation) shouldBe bufferedImg
     MockImage.store(bufferedImg)
   }
 
