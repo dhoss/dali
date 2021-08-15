@@ -16,7 +16,7 @@ object ImageHandler {
     def resize: ResizeStrategy
   }
 
-  trait Metadata {
+  trait Image {
     val location: ImageLocation
     val height: Int
     val width: Int
