@@ -21,6 +21,9 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
       }
     }
 
+    bufferedImg.getHeight should equal(250)
+    bufferedImg.getWidth should equal(250)
+
     val r = resizeStrategy.resize(150, 150, bufferedImg)
     r.getHeight should equal(150)
     r.getWidth should equal(150)
