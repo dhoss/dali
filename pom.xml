@@ -13,8 +13,20 @@
         <scala.version>2.13.6</scala.version>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <thumbnailator.version>0.4.14</thumbnailator.version>
+        <scalatest.version>3.2.9</scalatest.version>
+        <scalamock.version>5.1.0</scalamock.version>
+        <maven-shade.version>3.2.4</maven-shade.version>
+        <maven-compiler.version>3.8.1</maven-compiler.version>
+        <scala-maven.version>4.5.2</scala-maven.version>
+        <os-lib.version>0.7.8</os-lib.version>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>net.coobird</groupId>
+            <artifactId>thumbnailator</artifactId>
+            <version>${thumbnailator.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
@@ -24,26 +36,19 @@
         <dependency>
             <groupId>org.scalactic</groupId>
             <artifactId>scalactic_2.13</artifactId>
-            <version>3.2.9</version>
+            <version>${scalatest.version}</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_2.13</artifactId>
-            <version>3.2.9</version>
+            <version>${scalatest.version}</version>
             <scope>test</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.scalamock/scalamock -->
         <dependency>
             <groupId>org.scalamock</groupId>
             <artifactId>scalamock_2.13</artifactId>
-            <version>5.1.0</version>
+            <version>${scalamock.version}</version>
             <scope>test</scope>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.sksamuel.scrimage/scrimage-core -->
-        <dependency>
-            <groupId>com.sksamuel.scrimage</groupId>
-            <artifactId>scrimage-core</artifactId>
-            <version>4.0.22</version>
         </dependency>
     </dependencies>
     <build>
@@ -53,7 +58,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
+                <version>${maven-shade.version}</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -97,12 +102,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>${maven-compiler.version}</version>
             </plugin>
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
-                <version>4.5.2</version>
+                <version>${scala-maven.version}</version>
                 <executions>
                     <execution>
                         <id>scala-compile-first</id>
