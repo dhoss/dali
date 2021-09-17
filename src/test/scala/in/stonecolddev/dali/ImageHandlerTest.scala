@@ -1,6 +1,5 @@
 package in.stonecolddev.dali
 
-import in.stonecolddev.dali.ImageHandler.FileStore.FileImage
 import in.stonecolddev.dali.ImageHandler._
 import org.scalamock.function.{MockFunction1, MockFunction3}
 import org.scalamock.scalatest.MockFactory
@@ -11,7 +10,8 @@ import java.awt.image.BufferedImage
 
 class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory {
 
-  "ImageHandler.Resizer" should "call resize correctly" in new MockImageTest {
+  // TODO: is there any real point in testing a trait?
+  "ImageHandler.Resizer" should "call resize correctly" in new ImageTest {
     val resizeStrategy: Resizer = new Resizer {
       override def resize: ResizeStrategy = (width: Int, height: Int, _: BufferedImage) => {
         inMemoryBufferedImage(width, height)
@@ -26,18 +26,25 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
     r.getWidth should equal(150)
   }
 
-  "ImageHandler.Image" should "call read and store correctly" in new MockImageTest {
+  "ImageHandler.Store" should "call read and store correctly" in new ImageTest {
+    val mockRead: MockFunction1[ImageLocation, BufferedImage] = mockFunction[ImageLocation, BufferedImage]
+    val mockStore: MockFunction3[ImageLocation, MimeType, BufferedImage, Unit] = mockFunction[ImageLocation, MimeType, BufferedImage, Unit]
     mockRead expects imageLocation returns bufferedImg
     mockStore expects(imageLocation, mimeType, bufferedImg)
 
-    MockImage.reader(imageLocation) shouldBe bufferedImg
-    MockImage.writer(imageLocation, mimeType, bufferedImg)
+    val store: Store = new Store {
+      override def read: Reader = mockRead
+      override def write: Writer = mockStore
+    }
+
+    store.read(imageLocation) shouldBe bufferedImg
+    store.write(imageLocation, mimeType, bufferedImg)
   }
 
-  "FileStore.FileImage" should "store an image correctly" in new FileImageTest {
-    // TODO move this to FileImageTest
+  "ImageHandler.FileStore" should "store an image correctly" in new FileImageTest {
     try {
-      fi.write()
+      import fi._
+      write(imageLocation, mimeType, bufferedImg)
 
       val actual = readTestImage()
       actual.getHeight shouldBe bufferedImg.getHeight
@@ -47,17 +54,18 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
     }
   }
 
-  it should "read and image correctly" in new FileImageTest {
+  it should "read an image correctly" in new FileImageTest {
     try {
       writeTestImage()
-
-      val actual = fi.read()
+      import fi._
+      val actual = read(imageLocation)
       actual.getHeight shouldBe bufferedImg.getHeight
       actual.getWidth shouldBe bufferedImg.getWidth
     } finally {
       cleanup()
     }
   }
+
 
   trait FileImageTest extends ImageTest {
     import java.io.File
@@ -68,8 +76,7 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
 
     private lazy val imageFile = new File(imageLocation)
 
-    lazy val fi: FileImage =
-      FileImage(imageLocation, bufferedImg.getHeight(), bufferedImg.getWidth(), name, description, mimeType, bufferedImg)
+    lazy val fi: FileStore.FileStore = FileStore.Factory()
 
     def readTestImage(): BufferedImage = ImageIO.read(imageFile)
     def writeTestImage(): Unit =
@@ -84,12 +91,20 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
 
   trait ImageTest {
     val bufferedImg: BufferedImage = inMemoryBufferedImage()
-    val name: String
-    val description: String
+    val name = "test image name"
+    val description = "test image description"
     val mimeType = "image/jpg"
     val format: MimeType = mimeType.split("/")(1)
     lazy val imageLocation = s"/tmp/dali/images/${name.split("\\s").mkString("+")}.${format}"
 
+    lazy val testImage: Image = Image(
+      imageLocation,
+      250,
+      250,
+      name,
+      description,
+      mimeType,
+      inMemoryBufferedImage())
 
     def inMemoryBufferedImage(): BufferedImage = inMemoryBufferedImage(250, 250)
 
@@ -102,28 +117,6 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
       g.drawString("dali", 20, 20)
 
       bufferedImage
-    }
-  }
-
-  trait MockImageTest extends ImageTest {
-
-    val mockRead: MockFunction1[ImageLocation, BufferedImage] = mockFunction[ImageLocation, BufferedImage]
-    val mockStore: MockFunction3[ImageLocation, MimeType, BufferedImage, Unit] =
-      mockFunction[ImageLocation, MimeType, BufferedImage, Unit]
-
-    override val name = "mock image name"
-    override val description = "mock image description"
-
-    object MockImage extends Image {
-      override val location: ImageLocation = imageLocation
-      override val height: Int = 250
-      override val width: Int = 250
-      override val name: String = name
-      override val description: String = description
-      override val reader: Reader = mockRead
-      override val writer: Writer = mockStore
-      override val mimeType: String = mimeType
-      override val data: BufferedImage = inMemoryBufferedImage()
     }
   }
 }

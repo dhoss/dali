@@ -1,7 +1,5 @@
 package in.stonecolddev.dali
 
-
-
 import java.awt.image.BufferedImage
 
 object ImageHandler {
@@ -14,23 +12,22 @@ object ImageHandler {
   type Writer = (ImageLocation, MimeType, BufferedImage) => Unit
   type Reader = ImageLocation => BufferedImage
 
+  case class Image(
+    location: ImageLocation, // TODO: generate a slug, /p/a/th here
+    height: Int,
+    width: Int,
+    name: String,
+    description: String,
+    mimeType: String,
+    data: BufferedImage)
+
   trait Resizer {
     def resize: ResizeStrategy
   }
 
-  trait Image extends Store {
-    val location: ImageLocation
-    val height: Int
-    val width: Int
-    val name: String
-    val description: String
-    val mimeType: String
-    val data: BufferedImage
-  }
-
   trait Store {
-    def reader: Reader
-    def writer: Writer
+    def read: Reader
+    def write: Writer
   }
 
   object FileStore {
@@ -38,29 +35,22 @@ object ImageHandler {
     import java.io.File
     import javax.imageio.ImageIO
 
-    trait FileStore extends Store {
-      def reader: Reader =
+    // TODO: determine if this is a good name
+    object Factory {
+      def apply() = new FileStore()
+    }
+
+    class FileStore extends Store {
+      def read: Reader =
         (imageLocation: String) => ImageIO.read(new File(imageLocation))
 
-      def writer: Writer = {
+      def write: Writer = {
         (imageLocation, mimeType, bufferedImage: BufferedImage) =>
           val file = new File(imageLocation)
           // TODO: make this less shitty
           new File(file.getParent).mkdirs()
           ImageIO.write(bufferedImage, mimeType.split("/")(1), file)
       }
-    }
-
-    case class FileImage(
-      location: ImageLocation, // TODO: generate a slug here
-      height: Int,
-      width: Int,
-      name: String,
-      description: String,
-      mimeType: String,
-      data: BufferedImage) extends Image with FileStore {
-        def write(): Unit = writer(location, mimeType, data)
-        def read(): BufferedImage = reader(location)
     }
   }
 }
