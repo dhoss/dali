@@ -63,7 +63,6 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
     actual.getWidth shouldBe bi.getWidth
   }
 
-
   trait FileImageTest extends ImageTest {
     import Store._
 
@@ -81,8 +80,10 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
 
   trait ImageTest {
     val imgOs: ImageOutputStream = imageOutputStream()
-    lazy val name = "test image name"
     val description = "test image description"
+    val bi: BufferedImage = bufferedImage(250, 250)
+
+    lazy val name = "test image name"
     lazy val mimeType = "image/jpg"
     lazy val format: MimeType = mimeType.split("/")(1)
     lazy val path: Path = Files.createTempDirectory(null)
@@ -91,9 +92,6 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
     lazy val width = 250
     // TODO: maybe make configurable
     lazy val imageLocation = s"${path}/${slug}.${format}"
-
-    val bi: BufferedImage = bufferedImage(250, 250)
-
     lazy val testImage: Image = Image(
       imageLocation,
       height,
@@ -122,8 +120,7 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
       format: String = format): File = {
 
       path.toFile.deleteOnExit()
-      val f = File.createTempFile(
-        name, format, path.toFile)
+      val f = File.createTempFile(name, format, path.toFile)
       ImageIO.write(bufferedImage(width, height), format, f)
       f
     }
