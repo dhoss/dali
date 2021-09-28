@@ -72,7 +72,7 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
     override lazy val name = "file store image name"
     override val description = "file store image description"
 
-    lazy val fi: Store.FileStore = Factory.file()
+    lazy val fi: Store.FileStore = Strategy.file()
 
     def readTestImage(): BufferedImage = ImageIO.read(writeTestImage())
     def writeTestImage(): File = tempImage(width, height)

@@ -34,14 +34,15 @@ object ImageHandler {
     import java.io.File
     import javax.imageio.ImageIO
 
-    object Factory {
+    object Strategy {
       def file(): FileStore =
         FileStore(
           (imageLocation: String) =>
             ImageIO.createImageOutputStream(new File(imageLocation)),
           {
             (imageLocation, mimeType, imgOs: ImageInputStream) =>
-              // TODO: generate a slug, /p/a/th here
+              // TODO: generate a slug
+              // TODO: generate directory hash
               val file = new File(imageLocation)
               // TODO: make this less shitty
               new File(file.getParent).mkdirs()
