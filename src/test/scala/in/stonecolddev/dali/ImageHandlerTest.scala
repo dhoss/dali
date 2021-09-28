@@ -7,116 +7,131 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
 import java.awt.image.BufferedImage
+import java.io.File
+import java.nio.file.Files
+import javax.imageio.ImageIO
+import javax.imageio.stream.{ImageInputStream, ImageOutputStream}
 
 class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory {
 
-  // TODO: is there any real point in testing a trait?
   "ImageHandler.Resizer" should "call resize correctly" in new ImageTest {
     val resizeStrategy: Resizer = new Resizer {
-      override def resize: ResizeStrategy = (width: Int, height: Int, _: BufferedImage) => {
-        inMemoryBufferedImage(width, height)
-      }
+      override def resize: ResizeStrategy = (h: Int, w: Int, _: ImageInputStream) =>
+        imageOutputStream(h, w)
     }
 
-    bufferedImg.getHeight should equal(250)
-    bufferedImg.getWidth should equal(250)
+    bi.getHeight should equal(height)
+    bi.getWidth should equal(width)
 
-    val r: BufferedImage = resizeStrategy.resize(150, 150, bufferedImg)
+    val r: BufferedImage = fromImgOs(resizeStrategy.resize(150, 150, imgOs))
     r.getHeight should equal(150)
     r.getWidth should equal(150)
   }
 
   "ImageHandler.Store" should "call read and store correctly" in new ImageTest {
-    val mockRead: MockFunction1[ImageLocation, BufferedImage] = mockFunction[ImageLocation, BufferedImage]
-    val mockStore: MockFunction3[ImageLocation, MimeType, BufferedImage, Unit] = mockFunction[ImageLocation, MimeType, BufferedImage, Unit]
-    mockRead expects imageLocation returns bufferedImg
-    mockStore expects(imageLocation, mimeType, bufferedImg)
+    val mockRead: MockFunction1[ImageLocation, ImageOutputStream] =
+      mockFunction[ImageLocation, ImageOutputStream]
+    val mockStore: MockFunction3[ImageLocation, MimeType, ImageInputStream, Unit] =
+      mockFunction[ImageLocation, MimeType, ImageInputStream, Unit]
+    mockRead expects imageLocation returns imgOs
+    mockStore expects(imageLocation, mimeType, imgOs)
 
     val store: Store = new Store {
       override def read: Reader = mockRead
       override def write: Writer = mockStore
     }
 
-    store.read(imageLocation) shouldBe bufferedImg
-    store.write(imageLocation, mimeType, bufferedImg)
+    store.read(imageLocation) shouldBe imgOs
+    store.write(imageLocation, mimeType, imgOs)
   }
 
   "ImageHandler.FileStore" should "store an image correctly" in new FileImageTest {
-    try {
-      import fi._
-      write(imageLocation, mimeType, bufferedImg)
+    import fi._
+    write(imageLocation, mimeType, imgOs)
 
-      val actual = readTestImage()
-      actual.getHeight shouldBe bufferedImg.getHeight
-      actual.getWidth shouldBe bufferedImg.getWidth
-    } finally {
-      cleanup()
-    }
+    val actual = readTestImage()
+    actual.getHeight shouldBe bi.getHeight
+    actual.getWidth shouldBe bi.getWidth
   }
 
   it should "read an image correctly" in new FileImageTest {
-    try {
-      writeTestImage()
-      import fi._
-      val actual = read(imageLocation)
-      actual.getHeight shouldBe bufferedImg.getHeight
-      actual.getWidth shouldBe bufferedImg.getWidth
-    } finally {
-      cleanup()
-    }
+    val f: File = tempImage(width, height)
+    import fi._
+
+    val actual = fromImgOs(read(f.toString))
+    actual.getHeight shouldBe bi.getHeight
+    actual.getWidth shouldBe bi.getWidth
   }
 
 
   trait FileImageTest extends ImageTest {
+    import Store._
+
     import java.io.File
     import javax.imageio.ImageIO
 
-    override val name = "file store image name"
+    override lazy val name = "file store image name"
     override val description = "file store image description"
 
-    private lazy val imageFile = new File(imageLocation)
+    lazy val fi: Store.FileStore = Factory.file()
 
-    lazy val fi: FileStore.FileStore = FileStore.Factory()
-
-    def readTestImage(): BufferedImage = ImageIO.read(imageFile)
-    def writeTestImage(): Unit =
-      ImageIO.write(bufferedImg, format, imageFile)
-
-
-    def cleanup(): Boolean = {
-      import scala.reflect.io.Directory
-      new Directory(new File(imageLocation)).deleteRecursively()
-    }
+    def readTestImage(): BufferedImage = ImageIO.read(writeTestImage())
+    def writeTestImage(): File = tempImage(width, height)
   }
 
   trait ImageTest {
-    val bufferedImg: BufferedImage = inMemoryBufferedImage()
-    val name = "test image name"
+    val imgOs: ImageOutputStream = imageOutputStream()
+    lazy val name = "test image name"
     val description = "test image description"
-    val mimeType = "image/jpg"
-    val format: MimeType = mimeType.split("/")(1)
-    lazy val imageLocation = s"/tmp/dali/images/${name.split("\\s").mkString("+")}.${format}"
+    lazy val mimeType = "image/jpg"
+    lazy val format: MimeType = mimeType.split("/")(1)
+    lazy val path = Files.createTempDirectory(null)
+    lazy val slug = s"${name.split("\\s").mkString("+")}"
+    lazy val height = 250
+    lazy val width = 250
+    // TODO: maybe make configurable
+    lazy val imageLocation = s"${path}/${slug}.${format}"
+
+    val bi = bufferedImage(250, 250)
 
     lazy val testImage: Image = Image(
       imageLocation,
-      250,
-      250,
+      height,
+      width,
       name,
       description,
-      mimeType,
-      inMemoryBufferedImage())
+      mimeType)
 
-    def inMemoryBufferedImage(): BufferedImage = inMemoryBufferedImage(250, 250)
+    def fromImgOs(os: ImageOutputStream): BufferedImage = ImageIO.read(os)
 
-    def inMemoryBufferedImage(width: Int, height: Int): BufferedImage = {
+    private def bufferedImage(width: Int, height: Int): BufferedImage = {
       import java.awt.Graphics
       import java.awt.image.BufferedImage
-      val bufferedImage: BufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+      val bufferedImage: BufferedImage =
+        new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
       val g: Graphics = bufferedImage.getGraphics
 
       g.drawString("dali", 20, 20)
-
       bufferedImage
     }
+
+    def tempImage(
+      width: Int,
+      height: Int,
+      name: String = name,
+      format: String = format): File = {
+
+      path.toFile.deleteOnExit()
+      val f = File.createTempFile(
+        name, format, path.toFile)
+      ImageIO.write(bufferedImage(width, height), format, f)
+      f
+    }
+
+    def imageOutputStream(): ImageOutputStream =
+      imageOutputStream(250, 250)
+
+    def imageOutputStream(width: Int, height: Int): ImageOutputStream =
+      ImageIO.createImageOutputStream(tempImage(width, height))
   }
 }

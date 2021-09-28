@@ -1,25 +1,24 @@
 package in.stonecolddev.dali
 
-import java.awt.image.BufferedImage
+import javax.imageio.stream.{ImageInputStream, ImageOutputStream}
 
 object ImageHandler {
 
   type ImageLocation = String
   type MimeType = String
 
-  type ResizeStrategy = (Int, Int, BufferedImage) => BufferedImage
+  type ResizeStrategy = (Int, Int, ImageInputStream) => ImageOutputStream
 
-  type Writer = (ImageLocation, MimeType, BufferedImage) => Unit
-  type Reader = ImageLocation => BufferedImage
+  type Writer = (ImageLocation, MimeType, ImageInputStream) => Unit
+  type Reader = ImageLocation => ImageOutputStream
 
   case class Image(
-    location: ImageLocation, // TODO: generate a slug, /p/a/th here
+    location: ImageLocation,
     height: Int,
     width: Int,
     name: String,
     description: String,
-    mimeType: String,
-    data: BufferedImage)
+    mimeType: String)
 
   trait Resizer {
     def resize: ResizeStrategy
@@ -30,27 +29,31 @@ object ImageHandler {
     def write: Writer
   }
 
-  object FileStore {
+  object Store {
 
     import java.io.File
     import javax.imageio.ImageIO
 
-    // TODO: determine if this is a good name
     object Factory {
-      def apply() = new FileStore()
+      def file() =
+        FileStore(
+          (imageLocation: String) =>
+            ImageIO.createImageOutputStream(new File(imageLocation)),
+          {
+            (imageLocation, mimeType, imgOs: ImageInputStream) =>
+              // TODO: generate a slug, /p/a/th here
+              val file = new File(imageLocation)
+              // TODO: make this less shitty
+              new File(file.getParent).mkdirs()
+              ImageIO.write(ImageIO.read(imgOs), mimeType.split("/")(1), file)
+          })
     }
 
-    class FileStore extends Store {
-      def read: Reader =
-        (imageLocation: String) => ImageIO.read(new File(imageLocation))
+    case class FileStore(read: Reader, write: Writer) extends Store
+  }
 
-      def write: Writer = {
-        (imageLocation, mimeType, bufferedImage: BufferedImage) =>
-          val file = new File(imageLocation)
-          // TODO: make this less shitty
-          new File(file.getParent).mkdirs()
-          ImageIO.write(bufferedImage, mimeType.split("/")(1), file)
-      }
-    }
+  object FileResizer {
+
+
   }
 }
