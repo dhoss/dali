@@ -8,7 +8,7 @@ import org.scalatest.matchers.should
 
 import java.awt.image.BufferedImage
 import java.io.File
-import java.nio.file.Files
+import java.nio.file.{Files, Path}
 import javax.imageio.ImageIO
 import javax.imageio.stream.{ImageInputStream, ImageOutputStream}
 
@@ -49,7 +49,7 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
     import fi._
     write(imageLocation, mimeType, imgOs)
 
-    val actual = readTestImage()
+    val actual: BufferedImage = readTestImage()
     actual.getHeight shouldBe bi.getHeight
     actual.getWidth shouldBe bi.getWidth
   }
@@ -58,7 +58,7 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
     val f: File = tempImage(width, height)
     import fi._
 
-    val actual = fromImgOs(read(f.toString))
+    val actual: BufferedImage = fromImgOs(read(f.toString))
     actual.getHeight shouldBe bi.getHeight
     actual.getWidth shouldBe bi.getWidth
   }
@@ -85,14 +85,14 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
     val description = "test image description"
     lazy val mimeType = "image/jpg"
     lazy val format: MimeType = mimeType.split("/")(1)
-    lazy val path = Files.createTempDirectory(null)
+    lazy val path: Path = Files.createTempDirectory(null)
     lazy val slug = s"${name.split("\\s").mkString("+")}"
     lazy val height = 250
     lazy val width = 250
     // TODO: maybe make configurable
     lazy val imageLocation = s"${path}/${slug}.${format}"
 
-    val bi = bufferedImage(250, 250)
+    val bi: BufferedImage = bufferedImage(250, 250)
 
     lazy val testImage: Image = Image(
       imageLocation,

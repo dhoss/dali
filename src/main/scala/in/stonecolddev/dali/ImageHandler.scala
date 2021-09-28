@@ -35,7 +35,7 @@ object ImageHandler {
     import javax.imageio.ImageIO
 
     object Factory {
-      def file() =
+      def file(): FileStore =
         FileStore(
           (imageLocation: String) =>
             ImageIO.createImageOutputStream(new File(imageLocation)),
