@@ -55,10 +55,10 @@ class ImageHandlerTest extends AnyFlatSpec with should.Matchers with MockFactory
   }
 
   it should "read an image correctly" in new FileImageTest {
-    val f: File = tempImage(width, height)
     import fi._
 
-    val actual: BufferedImage = fromImgOs(read(f.toString))
+    val actual: BufferedImage =
+      fromImgOs(read(tempImage(width, height).toString))
     actual.getHeight shouldBe bi.getHeight
     actual.getWidth shouldBe bi.getWidth
   }
