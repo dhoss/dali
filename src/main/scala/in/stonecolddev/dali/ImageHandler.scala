@@ -1,16 +1,25 @@
 package in.stonecolddev.dali
 
-import javax.imageio.stream.{ImageInputStream, ImageOutputStream}
+
+import java.awt.image.BufferedImage
+import java.io.{FileInputStream, InputStream}
 
 object ImageHandler {
 
   type ImageLocation = String
   type MimeType = String
 
-  type ResizeStrategy = (Int, Int, ImageInputStream) => ImageOutputStream
+  type Width = Int
+  type Height = Int
 
-  type Writer = (ImageLocation, MimeType, ImageInputStream) => Unit
-  type Reader = ImageLocation => ImageOutputStream
+  // This really does need to be a BufferedImage otherwise we end up doing
+  // gymnastics and fighting the code
+  type ResizeStrategy = (Width, Height, InputStream) => BufferedImage
+
+  // a Writer needs to take an InputStream to read from
+  type Writer = (ImageLocation, MimeType, InputStream) => Unit
+  // a Reader needs to return what it read as an InputStream so things can read from it
+  type Reader = ImageLocation => InputStream
 
   case class Image(
     location: ImageLocation,
@@ -24,37 +33,48 @@ object ImageHandler {
     def resize: ResizeStrategy
   }
 
+  object Resizer {
+    def apply(): DefaultResizer = {
+      import net.coobird.thumbnailator.Thumbnails
+      DefaultResizer(
+        (width: Width, height: Height, is: InputStream) => {
+          // Devin TODO: since this is going to be a BufferedImage,
+          //        this should be common code
+          Thumbnails.of(is)
+                    .size(width, height)
+                    .asBufferedImage()
+        })
+    }
+
+    case class DefaultResizer(resize: ResizeStrategy) extends Resizer
+  }
+
   trait Store {
     def read: Reader
     def write: Writer
   }
 
   object Store {
-
-    import java.io.File
-    import javax.imageio.ImageIO
-
     object Strategy {
-      def file(): FileStore =
+      def file(): FileStore = {
+        import java.io.File
+        import javax.imageio.ImageIO
         FileStore(
-          (imageLocation: String) =>
-            ImageIO.createImageOutputStream(new File(imageLocation)),
+          // Reader
+          (imageLocation: String) => new FileInputStream(imageLocation),
+          // Writer
           {
-            (imageLocation, mimeType, imgOs: ImageInputStream) =>
+            (imageDestination, mimeType, is: InputStream) =>
               // TODO: generate a slug
               // TODO: generate directory hash
-              val file = new File(imageLocation)
+              val file = new File(imageDestination)
               // TODO: make this less shitty
               new File(file.getParent).mkdirs()
-              ImageIO.write(ImageIO.read(imgOs), mimeType.split("/")(1), file)
+              ImageIO.write(ImageIO.read(is), mimeType.split("/")(1), file)
           })
+      }
     }
 
     case class FileStore(read: Reader, write: Writer) extends Store
-  }
-
-  object FileResizer {
-
-
   }
 }
