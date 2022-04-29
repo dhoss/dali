@@ -1,3 +1,3 @@
 ## Dali
 
-simple image gallery written in scala
+simple image gallery written in java
